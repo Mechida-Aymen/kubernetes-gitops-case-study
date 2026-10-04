@@ -2,44 +2,45 @@
 
 ```mermaid
 flowchart LR
-    A[Nexus Artifact] --> B[Jenkins Pipeline]
-    B --> C[Docker Image Build]
-    C --> D[Trivy Vulnerability Scan]
-    D --> E{Scan Accepted?}
-    E -- No --> F[Stop / Review]
-    E -- Yes --> G[Push Image to Harbor]
+    NEXUS[Nexus Artifact]
+      --> JENKINS[Jenkins Pipeline]
+      --> BUILD[Docker Build]
+      --> TRIVY[Trivy Scan]
+      --> HARBOR[Push to Harbor]
 
-    G --> H[Jenkins Updates Image Tag]
-    H --> I[GitOps Repository]
-    I --> J[Argo CD]
-    J --> K[Compare Desired vs Actual State]
-    K --> L[Sync Kubernetes Resources]
-    L --> M[Kubernetes Pulls Image]
-    G -->|image source| M
+    JENKINS -->|update image tag| GIT[GitOps Repository]
+    GIT --> ARGO[Argo CD]
+    ARGO --> K8S[Kubernetes]
+
+    K8S -.->|pull referenced image| HARBOR
 ```
 
-## Implemented Project Flow
+## What Happens
 
-The CI pipeline performed:
+1. Jenkins retrieves the application artifact from Nexus.
+2. Jenkins builds the container image.
+3. Trivy scans the image.
+4. Jenkins pushes the validated image to Harbor.
+5. Jenkins automatically commits the new image tag to the GitOps repository.
+6. Argo CD detects the Git change.
+7. Argo CD synchronizes the Kubernetes resources.
+8. Kubernetes pulls the referenced image from Harbor.
 
-- artifact retrieval from Nexus
-- image build
-- vulnerability scanning
-- image publication to Harbor
-- automatic update of the image tag in the GitOps repository
+## Responsibility of Each Component
 
-Argo CD then detected the Git change and synchronized the desired state with Kubernetes.
-
-Kubernetes did not receive an image directly from Jenkins or Argo CD. The deployment referenced the Harbor image, and the cluster pulled that image at runtime.
+| Component | Responsibility |
+|---|---|
+| Nexus | Stores application artifacts |
+| Jenkins | Orchestrates CI and updates the GitOps image tag |
+| Docker | Builds the container image |
+| Trivy | Scans the image for vulnerabilities |
+| Harbor | Stores the validated container image |
+| GitOps Repository | Stores the desired deployment state |
+| Argo CD | Reconciles Git state with Kubernetes |
+| Kubernetes | Runs the workloads and pulls images from Harbor |
 
 ## Production Consideration
 
-The automatic Jenkins commit to the GitOps repository was part of the project workflow.
+The automatic Jenkins write-back to Git reflected the project workflow.
 
-In a stricter production setup, the promotion step could instead use controls such as:
-
-- pull requests and approval
-- image digests
-- environment promotion
-- dedicated image-automation tooling
-- signed images and policy checks
+A production environment may introduce additional controls such as pull-request approval, image digests, promotion gates or dedicated image-automation tooling.
