@@ -2,74 +2,63 @@
 
 ## Legacy Context
 
-The starting point was a VM-based enterprise platform composed of Java applications hosted on Tomcat and a distributed Cassandra data layer.
+The starting point was a VM-based platform composed of Java/Spring applications hosted on Tomcat and a distributed Cassandra data layer.
 
-The architecture had grown around traditional server operations, which made deployment, scaling and recovery more dependent on host-level procedures.
+Operations depended heavily on server-level configuration and manual procedures for deployment, scaling, initialization and recovery.
 
-## Migration Objectives
+## Validation Environment
 
-The target design aimed to:
+The documented validation lab used Kubernetes installed with kubeadm on virtual machines:
 
-- standardize application deployment
-- improve workload isolation
-- introduce declarative infrastructure behavior
-- separate application build from deployment state
-- improve observability
-- support horizontal scaling where appropriate
-- reduce configuration drift
-- improve service recovery
+| Node | CPU | RAM | Role |
+|---|---:|---:|---|
+| Control Plane | 3 vCPU | 6 GB | Cluster management |
+| Worker 1 | 3 vCPU | 6 GB | Workloads |
+| Worker 2 | 3 vCPU | 6 GB | Workloads |
+| Worker 3 | 3 vCPU | 6 GB | Workloads |
 
-## Kubernetes Design
+The nodes ran Ubuntu Server 22.04 LTS and Kubernetes v1.33.
 
-The application layer was modeled as Kubernetes workloads and exposed through Kubernetes networking primitives.
+Calico provided pod networking and supported NetworkPolicies.
 
-The design separated:
+## Workload Design
 
-- stateless application workloads
-- stateful database workloads
-- configuration
-- secrets
-- persistent data
-- ingress
-- monitoring
+### Application Layer
 
-### Stateless Workloads
+Java/Tomcat applications were deployed as replicated Kubernetes Deployments.
 
-Java/Tomcat application components were deployed as replicated workloads so that multiple instances could run concurrently.
+Configuration was externalized with ConfigMaps, and internal access was provided through ClusterIP Services.
 
-This enabled:
+### Data Layer
 
-- rolling updates
-- replica-based availability
-- horizontal scaling
-- readiness-aware traffic routing
+Cassandra was deployed using StatefulSets because stable identity and persistent storage were required.
 
-### Stateful Workloads
+The design also included Headless Services, topology-aware scheduling and automated bootstrap.
 
-The Cassandra layer required stateful workload orchestration.
+## Network Architecture
 
-Important concerns included:
+External traffic followed this path:
 
-- stable network identity
-- persistent storage
-- controlled startup behavior
-- cluster membership
-- service discovery
+```text
+Users
+  ↓
+External Reverse Proxy
+  ↓
+NGINX Ingress Controller
+  ↓
+ClusterIP Service
+  ↓
+Application Pods
+```
 
-### Networking
+Cassandra used a Headless Service so individual nodes could be resolved directly through DNS for discovery, replication and intra-ring communication.
 
-Kubernetes Services provided stable service discovery inside the cluster.
+A dedicated network interface was also used for cluster-related traffic in the lab environment.
 
-Ingress was used for controlled external HTTP access, while reverse-proxy behavior was kept separate from application containers.
+## Scheduling
+
+Node Affinity and Pod Anti-Affinity were used for Cassandra placement to distribute stateful nodes across workers and reduce failure concentration.
 
 ## Design Principle
 
-The core principle was to replace host-specific operational knowledge with declarative platform behavior wherever possible.
-
-Instead of asking:
-
-> Which server should this application run on?
-
-the platform could answer:
-
-> What state should this workload have, and how should Kubernetes maintain that state?
+The central design principle was to replace host-specific operational procedures with declarative platform behavior wherever practical.
