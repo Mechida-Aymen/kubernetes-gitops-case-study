@@ -12,7 +12,7 @@ The migration introduced security controls around:
 
 ## Image Security
 
-Container images were scanned before being published to the private registry.
+Container images were scanned before being published to Harbor, which was used as the private container registry.
 
 This reduced the risk of promoting known vulnerable images into deployment environments.
 
