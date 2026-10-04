@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/scalability-ha.md)
+
 # Scalability & High Availability
 
 ## Replicated Application Workloads
