@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](README.fr.md)
+
 # Kubernetes & GitOps Migration — Sanitized Case Study
 
 > **Confidentiality note**
