@@ -7,30 +7,39 @@ flowchart LR
     C --> D[Trivy Vulnerability Scan]
     D --> E{Scan Accepted?}
     E -- No --> F[Stop / Review]
-    E -- Yes --> G[Push to Harbor]
+    E -- Yes --> G[Push Image to Harbor]
 
-    H[GitOps Repository] --> I[Argo CD]
-    I --> J[Compare Desired vs Actual State]
-    J --> K[Sync Kubernetes Resources]
-
-    G --> K
+    G --> H[Jenkins Updates Image Tag]
+    H --> I[GitOps Repository]
+    I --> J[Argo CD]
+    J --> K[Compare Desired vs Actual State]
+    K --> L[Sync Kubernetes Resources]
+    L --> M[Kubernetes Pulls Image]
+    G -->|image source| M
 ```
 
-## Separation of Responsibilities
+## Implemented Project Flow
 
-The flow deliberately separates:
+The CI pipeline performed:
 
-**CI**
-- retrieve artifact
-- build image
-- scan image
-- publish image
+- artifact retrieval from Nexus
+- image build
+- vulnerability scanning
+- image publication to Harbor
+- automatic update of the image tag in the GitOps repository
 
-from:
+Argo CD then detected the Git change and synchronized the desired state with Kubernetes.
 
-**GitOps/CD**
-- store desired deployment state in Git
-- detect drift
-- synchronize approved state with Kubernetes
+Kubernetes did not receive an image directly from Jenkins or Argo CD. The deployment referenced the Harbor image, and the cluster pulled that image at runtime.
 
-This separation improves traceability and reduces hidden manual changes.
+## Production Consideration
+
+The automatic Jenkins commit to the GitOps repository was part of the project workflow.
+
+In a stricter production setup, the promotion step could instead use controls such as:
+
+- pull requests and approval
+- image digests
+- environment promotion
+- dedicated image-automation tooling
+- signed images and policy checks
