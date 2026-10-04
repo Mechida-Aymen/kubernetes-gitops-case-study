@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/cicd-gitops-flow.md)
+
 # CI/CD & GitOps Flow
 
 ```mermaid
