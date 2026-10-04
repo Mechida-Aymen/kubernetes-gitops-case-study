@@ -1,53 +1,45 @@
 # Challenges & Lessons Learned
 
-## 1. Migrating Legacy Assumptions
+## 1. Legacy Applications Carry Host Assumptions
 
-Legacy applications often assume:
+The migration required identifying assumptions around host-local configuration, fixed network expectations, deployment paths and startup behavior.
 
-- stable hosts
-- local configuration
-- fixed ports
-- long startup times
-- direct server access
+Containerization alone does not remove these assumptions.
 
-These assumptions need to be identified before containerization.
+## 2. Kubernetes Networking Required Careful Design
 
-## 2. Stateful Systems Need Different Thinking
+Cluster traffic, ingress, Cassandra discovery and monitoring flows had different requirements.
 
-Stateful workloads cannot be treated like ordinary stateless replicas.
+Calico, ClusterIP Services, Headless Services, NGINX Ingress and the external reverse proxy each solved a different part of the problem.
 
-Stable identity, storage, bootstrap behavior and service discovery become central design concerns.
+## 3. Stateful Workloads Are Fundamentally Different
 
-## 3. Readiness Matters as Much as Liveness
+Cassandra required stable identity, persistent storage, controlled placement, topology awareness and automated bootstrap.
 
-A process can be alive while the application is still unable to serve traffic.
+## 4. Dynamic Helm Generation Reduced Repetition
 
-Using readiness checks correctly helps prevent traffic from reaching workloads too early.
+Generating Cassandra topology from Helm values reduced repetitive resource definitions and made logical Data Centers easier to manage.
 
-## 4. GitOps Reduces Hidden Changes
+## 5. Initialization Should Be Automated
 
-Manual cluster changes create drift.
+Schema, initial data and user initialization were automated so deployments were consistent and reproducible.
 
-Keeping deployment intent in Git improves traceability and makes it easier to understand why a given state exists.
+## 6. Startup, Readiness and Liveness Solve Different Problems
 
-## 5. Monitoring Must Be Designed Early
+These probes were used for different lifecycle stages and should not be treated as interchangeable checks.
 
-It is easier to operate a platform when metrics, dashboards and alerts are considered during the architecture phase instead of being added after failures occur.
+## 7. GitOps Reduced Hidden Changes
 
-## 6. Security Is Cross-Cutting
+Keeping deployment intent in Git improved traceability and made configuration drift visible.
 
-Security decisions affect CI, registries, Kubernetes identities, secrets, networking and runtime behavior.
+## 8. External Secrets Improved Separation of Concerns
 
-## 7. Migration Is More Than Containerization
+Vault remained outside the cluster while External Secrets Operator handled synchronization into Kubernetes.
 
-The most important lesson was that moving to Kubernetes is not simply converting applications into containers.
+## 9. Observability Needed Multiple Perspectives
 
-A successful migration also changes:
+Useful monitoring required infrastructure, Kubernetes-resource, container, Cassandra and JVM metrics together.
 
-- delivery workflows
-- configuration management
-- observability
-- scaling
-- failure recovery
-- security boundaries
-- operational ownership
+## 10. Migration Is More Than Containerization
+
+The project changed delivery workflows, configuration management, networking, secrets, monitoring, scaling and recovery—not only packaging.
