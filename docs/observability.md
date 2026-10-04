@@ -2,58 +2,64 @@
 
 ## Goal
 
-The monitoring design aimed to provide visibility across:
+Observability covered three main levels:
 
-- Kubernetes infrastructure
-- hosts and nodes
-- application workloads
-- JVM behavior
-- Cassandra
-- service availability
+1. Kubernetes infrastructure
+2. Cassandra
+3. Java/Tomcat applications
 
-## Stack
-
-The observability stack included:
+## Core Stack
 
 - Prometheus
 - Grafana
 - Alertmanager
-- infrastructure exporters
-- JVM/application metrics
-- Kubernetes metrics
 
-## Metrics Collection
+## Kubernetes & Node Metrics
 
-Prometheus collected metrics from the platform and monitored services.
+### Node Exporter
 
-Examples of monitored areas included:
+Collected host metrics such as CPU, memory, storage and network activity.
 
-- node resource usage
-- pod health
-- workload state
-- application/JVM metrics
-- Cassandra metrics
-- service availability
+### kube-state-metrics
 
-## Dashboards
+Exposed state information for Kubernetes resources such as Pods, Deployments, StatefulSets and Services.
 
-Grafana was used to turn metrics into operational views.
+### cAdvisor
 
-Useful dashboard categories included:
+Provided container-level resource metrics.
+
+## Cassandra Monitoring
+
+A Cassandra Exporter exposed database-oriented metrics including node state, read/write behavior, latency and replication indicators.
+
+## Application & JVM Monitoring
+
+A JMX Exporter was used for Java/Tomcat metrics, including:
+
+- memory usage
+- garbage collection
+- thread counts
+- runtime/application behavior
+
+## Prometheus
+
+Prometheus centralized metric collection and evaluated alert rules.
+
+## Grafana
+
+Grafana dashboards provided views for:
 
 - cluster health
-- application health
-- CPU and memory
-- JVM behavior
-- database health
-- replica status
+- Cassandra behavior
+- application/JVM metrics
+- resource consumption
 
-## Alerting
+## Alertmanager
 
-Alertmanager handled alert routing from Prometheus.
+Alertmanager centralized alerts, applied grouping/filtering and distributed notifications.
 
-The goal was to make alerts actionable by associating them with meaningful failure conditions instead of simply collecting raw metrics.
+Email was used as an alert delivery mechanism in the documented environment.
 
 ## Operational Principle
 
-Observability was treated as part of the platform design, not as an optional layer added after deployment.
+Monitoring was designed as part of the platform architecture rather than added after deployment.
