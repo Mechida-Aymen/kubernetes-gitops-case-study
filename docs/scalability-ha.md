@@ -1,44 +1,57 @@
 # Scalability & High Availability
 
-## Application Availability
+## Replicated Application Workloads
 
-Stateless application workloads were deployed with multiple replicas to reduce dependence on a single instance.
+Stateless application workloads were deployed with multiple replicas.
 
-Kubernetes could replace failed pods automatically and keep traffic away from workloads that were not ready.
+Kubernetes could recreate failed pods and maintain availability without depending on a single application instance.
 
 ## Health Probes
 
-Different probe types were used for different purposes:
-
 ### Startup Probe
 
-Protected slow-starting applications from being restarted before initialization had completed.
+Used for applications with longer initialization times to avoid premature restarts.
 
 ### Readiness Probe
 
-Controlled whether a workload was eligible to receive traffic.
+Controlled whether a pod was ready to receive traffic.
 
 ### Liveness Probe
 
-Detected workloads that were running but no longer healthy.
+Detected unhealthy or blocked application instances so Kubernetes could restart them.
 
-## Horizontal Scaling
+## Horizontal Pod Autoscaler
 
-Horizontal Pod Autoscaling was used for suitable stateless workloads.
+HPA was used for the application layer.
 
-Scaling decisions could be based on resource utilization while enforcing minimum and maximum replica limits.
+Scaling considered CPU and memory utilization and adjusted replica counts according to load.
 
-## Stateful Availability
+## Cassandra Availability
 
-The database layer required a different availability strategy because stateful systems depend on stable identity, persistent data and cluster membership.
+Cassandra used StatefulSets because each node required stable identity and persistent state.
+
+Availability-related mechanisms included:
+
+- multiple logical Data Centers
+- persistent volumes
+- Node Affinity
+- Pod Anti-Affinity
+- Headless Services
+- automated initialization
+
+## Failure-Domain Awareness
+
+Cassandra nodes were distributed across worker nodes where possible to reduce the impact of a single Worker failure.
 
 ## High-Availability Principle
 
 High availability was treated as a combination of:
 
-- redundancy
+- workload redundancy
 - health awareness
-- automatic recovery
-- traffic control
+- automatic recreation
+- readiness-aware routing
+- horizontal scaling
 - persistent-state design
+- topology-aware scheduling
 - monitoring
