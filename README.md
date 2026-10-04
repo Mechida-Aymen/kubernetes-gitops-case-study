@@ -46,34 +46,46 @@ The starting platform relied on:
 
 The modernization introduced declarative workloads, automated delivery, centralized secrets, stronger network isolation, proactive monitoring and Kubernetes-native recovery mechanisms.
 
-## High-Level Architecture
+## Architecture Overview
+
+### 1. Delivery & GitOps
 
 ```mermaid
 flowchart LR
-    NEXUS[Nexus Artifacts] --> JENKINS[Jenkins CI]
+    NEXUS[Nexus] --> JENKINS[Jenkins]
     JENKINS --> BUILD[Docker Build]
     BUILD --> TRIVY[Trivy Scan]
-    TRIVY --> HARBOR[Harbor Registry]
+    TRIVY --> HARBOR[Harbor]
 
-    JENKINS -->|update image tag| GIT[GitOps Repository]
+    JENKINS -->|commit new image tag| GIT[GitOps Repository]
     GIT --> ARGO[Argo CD]
-    ARGO --> K8S[Kubernetes Cluster]
-    K8S -->|pull referenced image| HARBOR
+    ARGO --> K8S[Kubernetes]
 
-    USER[Users] --> RP[External Reverse Proxy]
+    K8S -.->|pull image| HARBOR
+```
+
+The CI pipeline publishes the validated image to Harbor and updates the image tag in the GitOps repository. Argo CD detects the Git change and synchronizes Kubernetes. Kubernetes then pulls the referenced image from Harbor.
+
+### 2. Runtime Platform
+
+```mermaid
+flowchart TB
+    USERS[Users] --> RP[External Reverse Proxy]
     RP --> ING[NGINX Ingress]
     ING --> APP[Java / Tomcat Deployments]
 
-    K8S --> APP
-    K8S --> CASS[Cassandra StatefulSets]
+    APP --> CASS[Cassandra StatefulSets]
 
     VAULT[HashiCorp Vault] --> ESO[External Secrets Operator]
-    ESO --> K8S
+    ESO --> APP
 
-    K8S --> PROM[Prometheus]
+    APP --> PROM[Prometheus]
+    CASS --> PROM
     PROM --> GRAF[Grafana]
     PROM --> ALERT[Alertmanager]
 ```
+
+This second view focuses only on the runtime platform: application traffic, data, secrets and observability.
 
 ## Kubernetes Validation Environment
 
