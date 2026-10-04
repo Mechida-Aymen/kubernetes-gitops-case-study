@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/high-level-architecture.md)
+
 # Architecture Overview
 
 Instead of placing every component into one large graph, the architecture is split into two views.
