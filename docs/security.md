@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/security.md)
+
 # Security
 
 ## Security Model
