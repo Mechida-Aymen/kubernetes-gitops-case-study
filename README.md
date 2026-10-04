@@ -6,200 +6,237 @@
 
 ## Overview
 
-This case study documents the migration of a legacy enterprise application platform from traditional Linux virtual machines to a Kubernetes-based delivery model.
+This case study documents the modernization of a legacy enterprise platform originally deployed on Linux virtual machines.
 
-The project focused on modernizing deployment and operations through:
+The target platform introduced:
 
-- containerization
-- Kubernetes orchestration
-- Helm packaging
-- GitOps with Argo CD
-- CI with Jenkins
-- private image distribution through Harbor with Harbor
-- security scanning
-- secrets management
-- observability with Prometheus, Grafana and Alertmanager
-- health probes and autoscaling
-- stronger operational repeatability
+- Docker containerization
+- Kubernetes installed with kubeadm
+- custom Helm charts
+- Jenkins CI
+- Trivy image scanning
+- Harbor as the private container registry
+- Argo CD for GitOps-based deployment
+- HashiCorp Vault and External Secrets Operator
+- Calico networking and NetworkPolicies
+- Prometheus, Grafana and Alertmanager
+- NGINX Ingress
+- Horizontal Pod Autoscaling
+- Startup, Readiness and Liveness probes
+- a stateful Cassandra topology
 
-The goal was not simply to "move workloads to Kubernetes", but to redesign the deployment process so that infrastructure and application delivery became more **repeatable, observable, scalable and controlled**.
+The objective was not simply to move workloads into containers, but to redesign deployment and operations so they became more **repeatable, observable, scalable, secure and resilient**.
 
-## Initial Situation
+## From Legacy to Cloud-Native Operations
 
-The legacy platform relied on:
+### Legacy Environment
 
-- Linux virtual machines
-- Java applications hosted on Tomcat
-- a distributed Cassandra database
-- manual or semi-manual deployment procedures
-- infrastructure-specific configuration
-- limited standardization between environments
+The starting platform relied on:
 
-This created operational challenges around deployment consistency, scaling, service recovery, configuration management and observability.
+- multiple Linux virtual machines
+- Java/Spring applications hosted on Tomcat
+- a distributed Cassandra cluster
+- host-level configuration
+- manual application deployment
+- manual Cassandra initialization
+- manual scaling and recovery operations
+- limited observability
 
-## Target Architecture
+### Target Platform
+
+The modernization introduced declarative workloads, automated delivery, centralized secrets, stronger network isolation, proactive monitoring and Kubernetes-native recovery mechanisms.
+
+## High-Level Architecture
 
 ```mermaid
 flowchart LR
-    DEV[Source Code] --> CI[Jenkins CI]
-    CI --> SCAN[Container Security Scan]
-    SCAN --> REG[Harbor Registry]
+    NEXUS[Nexus Artifacts] --> JENKINS[Jenkins CI]
+    JENKINS --> BUILD[Docker Build]
+    BUILD --> TRIVY[Trivy Scan]
+    TRIVY --> HARBOR[Harbor Registry]
 
     GIT[GitOps Repository] --> ARGO[Argo CD]
     ARGO --> K8S[Kubernetes Cluster]
+    HARBOR --> K8S
 
-    REG --> K8S
+    USER[Users] --> RP[External Reverse Proxy]
+    RP --> ING[NGINX Ingress]
+    ING --> APP[Java / Tomcat Deployments]
 
-    K8S --> WEB[Java / Tomcat Workloads]
-    K8S --> DB[Cassandra Stateful Workloads]
+    K8S --> APP
+    K8S --> CASS[Cassandra StatefulSets]
 
-    VAULT[Secrets Management] --> K8S
+    VAULT[HashiCorp Vault] --> ESO[External Secrets Operator]
+    ESO --> K8S
 
     K8S --> PROM[Prometheus]
     PROM --> GRAF[Grafana]
     PROM --> ALERT[Alertmanager]
-
-    INGRESS[Ingress / Reverse Proxy] --> K8S
 ```
+
+## Kubernetes Validation Environment
+
+The documented validation environment used:
+
+- **1 Control Plane**
+- **3 Worker nodes**
+- **Ubuntu Server 22.04 LTS**
+- **Kubernetes v1.33**
+- **kubeadm**
+- **Calico CNI**
+
+Each virtual machine was provisioned with **3 vCPU and 6 GB RAM**.
 
 ## Main Engineering Areas
 
-### Kubernetes Platform
+### Cassandra on Kubernetes
 
-The application architecture was adapted to Kubernetes using appropriate workload, networking, configuration and storage primitives.
+A custom Helm chart was developed to model Cassandra dynamically.
 
-Key concerns included:
+Key design elements included:
 
-- stateless and stateful workloads
-- service discovery
-- persistent storage
-- ingress
-- configuration separation
-- health checks
-- resource requests and limits
-- controlled scheduling and scaling
+- one StatefulSet per logical Data Center
+- stable pod identity
+- Headless Services for Cassandra discovery
+- persistent storage through volume claim templates
+- Node Affinity and Pod Anti-Affinity
+- automated bootstrap after deployment
+
+The bootstrap process automated schema initialization, initial data loading and application-user creation.
+
+### Application Layer
+
+Java/Tomcat workloads were deployed as Kubernetes Deployments.
+
+The application layer used:
+
+- ConfigMaps for externalized configuration
+- ClusterIP Services
+- NGINX Ingress
+- an external reverse proxy upstream of the Ingress Controller
+- multiple replicas
+- Startup, Readiness and Liveness probes
+- HPA based on CPU and memory signals
 
 ### CI/CD & GitOps
 
-The delivery workflow separated **image creation** from **deployment state**.
+The delivery chain separated image creation from deployment reconciliation:
 
-The CI pipeline was responsible for:
+```text
+Nexus
+  ↓
+Jenkins
+  ↓
+Docker Build
+  ↓
+Trivy Scan
+  ↓
+Harbor
+  ↓
+GitOps Repository
+  ↓
+Argo CD
+  ↓
+Kubernetes
+```
 
-1. building application images
-2. scanning images for vulnerabilities
-3. publishing approved images to Harbor
-
-GitOps was then used for deployment:
-
-1. desired deployment state was stored in Git
-2. Argo CD continuously compared Git with the cluster
-3. approved changes were synchronized to Kubernetes
-4. drift became visible and deployments became auditable
+Argo CD continuously compared desired state stored in Git with actual cluster state, making drift visible and deployment changes auditable.
 
 ### Security
 
-Security controls included:
+The security design included:
 
-- private image distribution
-- vulnerability scanning
-- externalized secrets management
-- workload identity and access controls
-- network isolation
-- non-root container practices
-- separation between application configuration and secrets
+- Trivy image scanning
+- Harbor for controlled image distribution
+- HashiCorp Vault outside the Kubernetes cluster
+- External Secrets Operator
+- RBAC
+- dedicated Service Accounts
+- Calico NetworkPolicies
+- least-privilege access design
 
 ### Observability
 
-The monitoring stack used:
+The monitoring architecture included:
 
 - Prometheus
 - Grafana
 - Alertmanager
-- infrastructure exporters
-- JVM/application metrics
-- Kubernetes workload metrics
+- Node Exporter
+- kube-state-metrics
+- cAdvisor
+- Cassandra Exporter
+- JMX Exporter for Java/Tomcat metrics
 
-This enabled visibility across both platform health and application behavior.
-
-### Reliability & Scaling
-
-The platform design introduced:
-
-- readiness probes
-- liveness probes
-- startup probes
-- horizontal autoscaling
-- replicated stateless workloads
-- stateful workload orchestration
-- declarative recovery behavior
+This provided visibility across infrastructure, Kubernetes resources, Cassandra and application/JVM behavior.
 
 ## Technology Stack
 
 | Area | Technologies |
 |---|---|
 | Containers | Docker |
-| Orchestration | Kubernetes |
+| Orchestration | Kubernetes, kubeadm |
 | Packaging | Helm |
-| GitOps | Argo CD |
+| Networking | Calico, Kubernetes Services, NGINX Ingress |
 | CI | Jenkins |
+| Artifact Repository | Nexus |
 | Registry | Harbor |
-| Security | Trivy, HashiCorp Vault |
-| Observability | Prometheus, Grafana, Alertmanager |
-| Networking | Kubernetes Services, Ingress, reverse proxy |
-| Applications | Java, Tomcat |
-| Database | Cassandra |
-| OS | Linux |
+| GitOps | Argo CD |
+| Security | Trivy, HashiCorp Vault, External Secrets Operator, RBAC, NetworkPolicies |
+| Observability | Prometheus, Grafana, Alertmanager, Node Exporter, kube-state-metrics, cAdvisor |
+| Application Monitoring | JMX Exporter |
+| Database Monitoring | Cassandra Exporter |
+| Applications | Java, Spring, Tomcat |
+| Database | Apache Cassandra |
+| OS | Ubuntu Server / Linux |
 
-## What This Repository Contains
+## Repository Structure
 
 ```text
 kubernetes-gitops-case-study/
 ├── README.md
 ├── docs/
 │   ├── architecture.md
+│   ├── cassandra.md
 │   ├── gitops-ci-cd.md
 │   ├── observability.md
 │   ├── security.md
 │   ├── scalability-ha.md
 │   └── challenges-lessons.md
 └── diagrams/
-    └── README.md
+    ├── high-level-architecture.md
+    ├── cicd-gitops-flow.md
+    └── observability-flow.md
 ```
 
-The repository contains **documentation only**. It does not contain production manifests or company-owned code.
+The repository contains **documentation only**. It does not contain company-owned source code, production manifests or confidential configuration.
 
-## Key Outcomes
+## Outcomes
 
 The migration approach improved:
 
 - deployment repeatability
 - configuration consistency
-- release traceability
-- operational visibility
-- workload recovery
+- Git-based traceability
 - horizontal scaling capability
-- separation of build and deployment responsibilities
-- security controls around images and secrets
-
-## Why This Case Study Is Public
-
-The purpose of this repository is to demonstrate the engineering reasoning behind a real Kubernetes and GitOps migration while respecting confidentiality.
-
-It focuses on:
-
-- architecture
-- technical decisions
-- operational trade-offs
-- platform engineering practices
-- lessons learned
-
-rather than exposing implementation artifacts owned by a company.
+- automatic workload recovery
+- secrets handling
+- network isolation
+- observability
+- operational maintainability
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Cassandra on Kubernetes](docs/cassandra.md)
 - [CI/CD & GitOps](docs/gitops-ci-cd.md)
 - [Observability](docs/observability.md)
 - [Security](docs/security.md)
 - [Scalability & High Availability](docs/scalability-ha.md)
 - [Challenges & Lessons Learned](docs/challenges-lessons.md)
+
+## Diagrams
+
+- [High-Level Architecture](diagrams/high-level-architecture.md)
+- [CI/CD & GitOps Flow](diagrams/cicd-gitops-flow.md)
+- [Observability Flow](diagrams/observability-flow.md)
