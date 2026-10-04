@@ -1,62 +1,59 @@
-# High-Level Architecture
+# Architecture Overview
+
+Instead of placing every component into one large graph, the architecture is split into two views.
+
+## 1. Delivery & GitOps
+
+```mermaid
+flowchart LR
+    NEXUS[Nexus] --> JENKINS[Jenkins]
+    JENKINS --> BUILD[Docker Build]
+    BUILD --> TRIVY[Trivy Scan]
+    TRIVY --> HARBOR[Harbor]
+
+    JENKINS -->|commit new image tag| GIT[GitOps Repository]
+    GIT --> ARGO[Argo CD]
+    ARGO --> K8S[Kubernetes]
+
+    K8S -.->|pull image| HARBOR
+```
+
+### Flow
+
+1. Jenkins retrieves the application artifact from Nexus.
+2. Jenkins builds the Docker image.
+3. Trivy scans the image.
+4. The validated image is pushed to Harbor.
+5. Jenkins updates the image tag in the GitOps repository.
+6. Argo CD detects the Git change.
+7. Argo CD synchronizes Kubernetes.
+8. Kubernetes pulls the referenced image from Harbor.
+
+## 2. Runtime Platform
 
 ```mermaid
 flowchart TB
-    subgraph Delivery["CI / Artifact Delivery"]
-      NEXUS[Nexus Artifacts]
-      JENKINS[Jenkins]
-      BUILD[Docker Build]
-      TRIVY[Trivy Scan]
-      HARBOR[Harbor Registry]
-      NEXUS --> JENKINS --> BUILD --> TRIVY --> HARBOR
-    end
+    USERS[Users] --> RP[External Reverse Proxy]
+    RP --> ING[NGINX Ingress]
+    ING --> APP[Java / Tomcat Deployments]
 
-    subgraph GitOps["GitOps"]
-      GIT[Git Repository]
-      ARGO[Argo CD]
-      GIT --> ARGO
-    end
-
-    subgraph Access["External Access"]
-      USERS[Users]
-      RP[Reverse Proxy]
-      INGRESS[NGINX Ingress]
-      USERS --> RP --> INGRESS
-    end
-
-    subgraph K8S["Kubernetes Cluster"]
-      APP[Java / Tomcat Deployments]
-      CASS[Cassandra StatefulSets]
-      SERVICES[ClusterIP / Headless Services]
-      PROM[Prometheus]
-      GRAF[Grafana]
-      ALERT[Alertmanager]
-
-      INGRESS --> APP
-      SERVICES --> APP
-      SERVICES --> CASS
-      PROM --> GRAF
-      PROM --> ALERT
-    end
-
-    JENKINS -->|update image tag| GIT
-    ARGO --> K8S
-    K8S -->|pull referenced image| HARBOR
+    APP --> CASS[Cassandra StatefulSets]
 
     VAULT[HashiCorp Vault] --> ESO[External Secrets Operator]
-    ESO --> K8S
+    ESO --> APP
+
+    APP --> PROM[Prometheus]
+    CASS --> PROM
+    PROM --> GRAF[Grafana]
+    PROM --> ALERT[Alertmanager]
 ```
 
-## What the Diagram Shows
+### Runtime Responsibilities
 
-The project workflow separates:
+- **Reverse Proxy + NGINX Ingress** — external application access
+- **Tomcat Deployments** — application workloads
+- **Cassandra StatefulSets** — stateful data layer
+- **Vault + External Secrets Operator** — secret delivery
+- **Prometheus + Grafana + Alertmanager** — metrics, dashboards and alerting
 
-- artifact retrieval and image build
-- security scanning and image publication
-- GitOps state management
-- cluster reconciliation
-- runtime image pulling
-
-After pushing an image to Harbor, Jenkins automatically updated the image tag in the GitOps repository. Argo CD detected that Git change and synchronized Kubernetes, which then pulled the referenced image from Harbor.
-
-The diagram is intentionally generic and excludes company-specific identifiers.
+The diagrams are intentionally generic and exclude company-specific identifiers.
