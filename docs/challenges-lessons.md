@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/challenges-lessons.md)
+
 # Challenges & Lessons Learned
 
 ## 1. Legacy Applications Carry Host Assumptions
