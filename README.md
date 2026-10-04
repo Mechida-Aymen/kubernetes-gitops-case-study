@@ -55,9 +55,10 @@ flowchart LR
     BUILD --> TRIVY[Trivy Scan]
     TRIVY --> HARBOR[Harbor Registry]
 
-    GIT[GitOps Repository] --> ARGO[Argo CD]
+    JENKINS -->|update image tag| GIT[GitOps Repository]
+    GIT --> ARGO[Argo CD]
     ARGO --> K8S[Kubernetes Cluster]
-    HARBOR --> K8S
+    K8S -->|pull referenced image| HARBOR
 
     USER[Users] --> RP[External Reverse Proxy]
     RP --> ING[NGINX Ingress]
@@ -120,7 +121,7 @@ The application layer used:
 
 ### CI/CD & GitOps
 
-The delivery chain separated image creation from deployment reconciliation:
+The implemented project flow was:
 
 ```text
 Nexus
@@ -133,14 +134,16 @@ Trivy Scan
   ↓
 Harbor
   ↓
-GitOps Repository
+Jenkins updates the image tag in the GitOps repository
   ↓
 Argo CD
   ↓
-Kubernetes
+Kubernetes pulls the referenced image from Harbor
 ```
 
-Argo CD continuously compared desired state stored in Git with actual cluster state, making drift visible and deployment changes auditable.
+After a validated image was pushed to Harbor, Jenkins automatically updated the image reference in the GitOps repository. Argo CD then detected the Git change and synchronized the cluster.
+
+> **Implementation note:** this automated Git write-back reflected the project/lab workflow. In production environments, organizations may prefer stricter promotion controls, pull-request approval, image-digest pinning or dedicated image-automation tooling.
 
 ### Security
 
