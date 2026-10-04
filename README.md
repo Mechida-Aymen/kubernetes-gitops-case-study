@@ -15,7 +15,7 @@ The project focused on modernizing deployment and operations through:
 - Helm packaging
 - GitOps with Argo CD
 - CI with Jenkins
-- private image distribution
+- private image distribution through Harbor with Harbor
 - security scanning
 - secrets management
 - observability with Prometheus, Grafana and Alertmanager
@@ -43,7 +43,7 @@ This created operational challenges around deployment consistency, scaling, serv
 flowchart LR
     DEV[Source Code] --> CI[Jenkins CI]
     CI --> SCAN[Container Security Scan]
-    SCAN --> REG[Private Container Registry]
+    SCAN --> REG[Harbor Registry]
 
     GIT[GitOps Repository] --> ARGO[Argo CD]
     ARGO --> K8S[Kubernetes Cluster]
@@ -87,7 +87,7 @@ The CI pipeline was responsible for:
 
 1. building application images
 2. scanning images for vulnerabilities
-3. publishing approved images to a private registry
+3. publishing approved images to Harbor
 
 GitOps was then used for deployment:
 
@@ -142,7 +142,7 @@ The platform design introduced:
 | Packaging | Helm |
 | GitOps | Argo CD |
 | CI | Jenkins |
-| Registry | Private container registry |
+| Registry | Harbor |
 | Security | Trivy, HashiCorp Vault |
 | Observability | Prometheus, Grafana, Alertmanager |
 | Networking | Kubernetes Services, Ingress, reverse proxy |
