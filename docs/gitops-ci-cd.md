@@ -1,60 +1,69 @@
 # CI/CD & GitOps
 
-## Separation of Responsibilities
+## Delivery Architecture
 
-The delivery model intentionally separated **continuous integration** from **continuous deployment**.
+The implementation separated **continuous integration** from **deployment reconciliation**.
 
-CI was responsible for producing trusted application artifacts.
+```text
+Nexus
+  ↓
+Jenkins
+  ↓
+Docker Build
+  ↓
+Trivy Scan
+  ↓
+Harbor
+  ↓
+GitOps Repository
+  ↓
+Argo CD
+  ↓
+Kubernetes
+```
 
-GitOps was responsible for defining and reconciling deployment state.
+## Jenkins CI
 
-## CI Flow
+Application artifacts were retrieved from Nexus.
 
-A typical CI flow was:
+Jenkins automated:
 
-1. retrieve source code
-2. build the application
-3. build the container image
-4. scan the image
-5. publish the image to Harbor
+1. artifact retrieval
+2. Docker image build
+3. validation
+4. Trivy vulnerability scanning
+5. publication to Harbor
 
-This meant that deployment systems consumed versioned artifacts rather than rebuilding applications during deployment.
+## Harbor
 
-## GitOps Flow
+Harbor was used as the private image registry.
 
-Argo CD monitored the Git repository containing the desired Kubernetes deployment state.
+It centralized image storage and provided a controlled source for versioned container images consumed by Kubernetes.
 
-The flow was:
+## GitOps Repository
 
-1. a deployment change was committed to Git
-2. Argo CD detected the change
-3. desired state was compared with cluster state
-4. the application was synchronized
-5. drift became visible through GitOps reconciliation
+Kubernetes manifests and Helm configuration were stored in a dedicated Git repository representing the desired state of the platform.
 
-## Why GitOps Was Useful
+## Argo CD
 
-GitOps improved:
+Argo CD continuously compared desired Git state with the real cluster state and synchronized approved changes.
 
-- auditability
+This improved:
+
+- traceability
+- repeatability
+- drift detection
 - rollback capability
-- change visibility
-- environment consistency
-- separation between build and deployment
-- operational repeatability
+- separation of CI and deployment responsibilities
 
 ## Helm
 
-Helm was used to package deployment configuration and avoid duplicating large amounts of Kubernetes YAML.
+Custom Helm charts were used to reduce repetitive YAML and generate reusable deployment resources.
 
-This helped parameterize:
-
-- replica counts
-- images
-- resources
-- ingress values
-- environment-specific settings
+Helm was especially important for the dynamic Cassandra topology.
 
 ## Key Lesson
 
-A major improvement came from treating Git as the source of truth for deployment intent instead of relying on manual cluster changes.
+The strongest improvement came from separating:
+
+**artifact creation → image publication → desired deployment state → cluster reconciliation**
