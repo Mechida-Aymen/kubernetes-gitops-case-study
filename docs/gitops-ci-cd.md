@@ -16,7 +16,7 @@ A typical CI flow was:
 2. build the application
 3. build the container image
 4. scan the image
-5. publish the image to a private registry
+5. publish the image to Harbor
 
 This meant that deployment systems consumed versioned artifacts rather than rebuilding applications during deployment.
 
