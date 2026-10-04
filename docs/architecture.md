@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/architecture.md)
+
 # Architecture
 
 ## Legacy Context
