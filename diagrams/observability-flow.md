@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/observability-flow.md)
+
 # Observability Flow
 
 ```mermaid
