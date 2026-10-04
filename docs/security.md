@@ -1,44 +1,63 @@
 # Security
 
-## Security Goals
+## Security Model
 
-The migration introduced security controls around:
-
-- container images
-- secrets
-- runtime privileges
-- service-to-service communication
-- deployment access
+The security design combined image security, secret management, identity controls and network isolation.
 
 ## Image Security
 
-Container images were scanned before being published to Harbor, which was used as the private container registry.
+Container images were scanned with Trivy before publication to Harbor.
 
-This reduced the risk of promoting known vulnerable images into deployment environments.
+## Harbor
 
-## Secrets Management
+Harbor acted as the controlled private image registry used by the Kubernetes environment.
 
-Secrets were kept separate from ordinary application configuration.
+## External Vault
 
-An external secrets-management approach was used so that sensitive values did not need to be embedded directly in deployment manifests.
+HashiCorp Vault was deliberately deployed **outside the main Kubernetes cluster**.
 
-## Runtime Security
+This reduced dependence on the cluster itself for secret recovery and preserved access to sensitive configuration during a major Kubernetes outage.
 
-Workloads followed least-privilege principles where possible.
+Vault centralized values such as:
 
-Practices included:
+- application credentials
+- database credentials
+- authentication information
+- service secrets
 
-- non-root containers
-- restricted service identities
-- scoped access
-- separation of configuration and secrets
+## External Secrets Operator
 
-## Network Isolation
+External Secrets Operator synchronized required values from Vault into Kubernetes Secret resources.
 
-Network policies were used to reduce unnecessary communication paths between workloads.
+Applications could consume standard Kubernetes Secrets while the authoritative sensitive data remained centralized in Vault.
 
-The intent was to move away from a flat network model toward explicit communication rules.
+## RBAC & Service Accounts
+
+Dedicated Service Accounts and scoped RBAC roles were used to limit permissions according to least-privilege principles.
+
+## NetworkPolicies
+
+Calico NetworkPolicies restricted unnecessary communication paths between workloads.
+
+## Security Layers
+
+```text
+Artifact
+  ↓
+Docker Image
+  ↓
+Trivy Scan
+  ↓
+Harbor
+  ↓
+Kubernetes
+  ├── RBAC / Service Accounts
+  ├── NetworkPolicies
+  └── External Secrets
+          ↓
+         Vault
+```
 
 ## Key Lesson
 
-Kubernetes security is not one feature. It is a combination of image trust, identity, secrets, network controls and runtime configuration.
+Kubernetes security is a combination of trusted images, scoped identities, protected secrets, runtime configuration and network boundaries.
