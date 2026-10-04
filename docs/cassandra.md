@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/cassandra.md)
+
 # Cassandra on Kubernetes
 
 ## Why Cassandra Needed Stateful Workloads
