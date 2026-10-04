@@ -39,8 +39,9 @@ flowchart TB
       PROM --> ALERT
     end
 
-    HARBOR --> K8S
+    JENKINS -->|update image tag| GIT
     ARGO --> K8S
+    K8S -->|pull referenced image| HARBOR
 
     VAULT[HashiCorp Vault] --> ESO[External Secrets Operator]
     ESO --> K8S
@@ -48,11 +49,14 @@ flowchart TB
 
 ## What the Diagram Shows
 
-The architecture separates four responsibilities:
+The project workflow separates:
 
-- artifact and image delivery
-- GitOps reconciliation
-- application/data workloads
-- security and observability
+- artifact retrieval and image build
+- security scanning and image publication
+- GitOps state management
+- cluster reconciliation
+- runtime image pulling
+
+After pushing an image to Harbor, Jenkins automatically updated the image tag in the GitOps repository. Argo CD detected that Git change and synchronized Kubernetes, which then pulled the referenced image from Harbor.
 
 The diagram is intentionally generic and excludes company-specific identifiers.
