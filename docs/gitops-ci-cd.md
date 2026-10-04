@@ -1,3 +1,5 @@
+🌐 **Language:** **English** | [Français](fr/gitops-ci-cd.md)
+
 # CI/CD & GitOps
 
 ## Delivery Architecture
